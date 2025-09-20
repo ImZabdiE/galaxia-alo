@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
-  <title>Galaxia del Amor — Mobile Optimizada</title>
-  <meta name="description" content="Galaxia 3D interactiva con apodos cariñosos. Optimizada para iPhone 11 y Samsung Galaxy S21 Ultra." />
+  <title>Galaxia del Amor — Multilingüe</title>
+  <meta name="description" content="Galaxia 3D interactiva con 'Te amo' en muchos idiomas. Optimizada para iPhone 11 y Samsung Galaxy S21 Ultra." />
   <style>
     :root{ --bg1:#0a0318; --bg2:#1a0b2e; --white:#ffffff; }
     html, body { height: 100%; }
     body{
-      margin:0; overflow:hidden; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+      margin:0; overflow:hidden; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
       color: var(--white);
       background: radial-gradient(1200px 800px at 70% 20%, #2a174a 0%, transparent 40%),
                   radial-gradient(1000px 700px at 20% 80%, #1e0f36 0%, transparent 45%),
@@ -17,15 +17,15 @@
       background-attachment: fixed;
       -webkit-tap-highlight-color: transparent;
       -webkit-touch-callout: none;
-      touch-action: none;
-      overscroll-behavior: none;
+      touch-action: none;            /* pasamos gestos al lienzo */
+      overscroll-behavior: none;     /* evita rebotes */
     }
     #scene { position: fixed; inset: 0; }
     #badge { position: fixed; left: 12px; bottom: env(safe-area-inset-bottom, 12px); opacity: .35; font-size: 12px; letter-spacing: .3px; }
   </style>
 </head>
 <body>
-  <div id="scene" aria-label="Galaxia 3D con apodos cariñosos"></div>
+  <div id="scene" aria-label="Galaxia 3D con 'Te amo' en muchos idiomas"></div>
   <div id="badge" aria-hidden="true"></div>
 
   <!-- Código principal como ES Module utilizando URL explícitas (sin import maps) -->
@@ -37,7 +37,7 @@
 
     function ready(fn){ if (document.readyState !== 'loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
 
-    ready(async ()=>{
+    ready(()=>{
       try {
         // === Detección de dispositivo ===
         function deviceClass(){
@@ -130,25 +130,36 @@
         }
         const galaxyPoints = createGalaxy();
 
-        // === Apodos ===
-        const FEMALE_BIAS = ["Amor","Mi amor","Mi vida","Mi cielo","Mi corazón","Reina","Princesa","Mi tesoro","Mi sol","Estrellita","Osita","Bombón","Dulzura","Preciosa","Hermosa","Bonita","Linda","Cosita","Muñeca","Nena","Bella","Guapa","Amorcito","Querida","Güerita","Morenita","Flaca","Gatita","Conejita","Lobita","Mi ángel","Sirena","Estrella polar","Solcito","Lunita","Miel","Dulce","Caramelo","Ternura","Ojitos","Sonrisita","Traviesa","Mi paz","Mi suerte","Melodía","Latido","Suspiro","Aurora","Brisa","Refugio","Chispa","Nube","Rayito","Tesoro mío","Mi niña","Mi peque","Mi princesa","Mi bella","Mi preciosa","Mi niña bonita"];
+        // === "Te amo" en muchos idiomas (sin indicar idioma) ===
+        const LOVE_PHRASES = [
+          "Te amo","I love you","Je t'aime","Ti amo","Ich liebe dich","Eu te amo","Amo-te","S'agapo","Te iubesc","T'estimo",
+          "Maite zaitut","Volim te","Kocham cię","Milujem ťa","Szeretlek","Ljublim te","Я тебя люблю","Я кохаю тебе",
+          "أحبك","אני אוהב אותך","Seni seviyorum","تو را دوست دارم",
+          "मैं तुमसे प्यार करता हूँ","আমি তোমাকে ভালবাসি","මම ඔයාට ආදරෙයි","ಮೆ ನಿನ್ನನ್ನು ಪ್ರೀತಿಸುತ್ತೇನೆ","நான் உன்னை காதலிக்கிறேன்","ഞാൻ നിന്നെ സ്നേഹിക്കുന്നു",
+          "میں تم سے پیار کرتا ہوں","म तिमीलाई माया गर्छु","ང་ཁྱེད་ལ་དགའ་པོ་ཡོད་",
+          "我爱你","我愛你","愛してる","사랑해","ຂ້ອຍຮັກເຈົ້າ","မင်းကိုချစ်တယ်","ខ្ញុំស្រឡាញ់អ្នក",
+          "Aku cinta kamu","Mahal kita","Aroha ahau ki a koe","Aloha wau iā 'oe",
+          "Nakupenda","Ndinokuda","Ek sê lief vir jou","Niyakuthanda","Mwen renmen ou",
+          "Nimitztlazotla","Kuyayki","Rohayhu",
+          "❤","♥","💜","💙","💖","💗"
+        ];
 
         const labelGroup = new THREE.Group();
         galaxy.add(labelGroup);
         const sprites = [];
 
-        // === Estilos de etiqueta (más pequeñas) ===
+        // === Estilos de etiqueta (más pequeñas; más separación) ===
         function computeLabelStyle(){
           if (DEV==='iphone11'){
-            return { fontSize: 22, padding: 7, baseHeight: 1.55, hoverScale: 1.08, minSep: 6.0, innerGap: 24 };
+            return { fontSize: 20, padding: 6, baseHeight: 1.45, hoverScale: 1.07, minSep: 7.2, innerGap: 26 };
           }
           if (DEV==='s21u'){
-            return { fontSize: 22, padding: 7, baseHeight: 1.6, hoverScale: 1.08, minSep: 6.0, innerGap: 24 };
+            return { fontSize: 20, padding: 6, baseHeight: 1.5, hoverScale: 1.07, minSep: 7.2, innerGap: 26 };
           }
           if (DEV==='mobile'){
-            return { fontSize: 24, padding: 8, baseHeight: 1.7, hoverScale: 1.08, minSep: 6.2, innerGap: 24 };
+            return { fontSize: 22, padding: 7, baseHeight: 1.6, hoverScale: 1.07, minSep: 7.5, innerGap: 26 };
           }
-          return { fontSize: 44, padding: 16, baseHeight: 2.8, hoverScale: 1.12, minSep: 7.0, innerGap: 22 };
+          return { fontSize: 42, padding: 14, baseHeight: 2.6, hoverScale: 1.1, minSep: 7.5, innerGap: 24 };
         }
         let labelStyle = computeLabelStyle();
 
@@ -172,8 +183,10 @@
           ctx.shadowBlur = 9; ctx.shadowOffsetY = 1;
           ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
           ctx.font = `800 ${fontSize}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
-          ctx.fillText(text, padding, h/2 + 1);
-          ctx.strokeText(text, padding, h/2 + 1);
+          // (no mostramos idioma; solo la frase)
+          const clean = String(text).replace(/\s*\([^)]*\)\s*/g,' ').replace(/\s+/g,' ').trim();
+          ctx.fillText(clean, padding, h/2 + 1);
+          ctx.strokeText(clean, padding, h/2 + 1);
           const texture = new THREE.CanvasTexture(canvas);
           texture.minFilter = THREE.LinearFilter;
           texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
@@ -186,16 +199,19 @@
           return sprite;
         }
 
-        function populateNicknamesOnGalaxy(list){
+        function populatePhrasesOnGalaxy(list){
+          // limpiar
           for (const s of sprites){ labelGroup.remove(s); s.material.map.dispose(); s.material.dispose(); }
           sprites.length = 0;
+
           const posAttr = galaxyPoints.geometry.getAttribute('position');
           const totalPos = posAttr.count;
           const INNER_GAP = labelStyle.innerGap;
           const MIN_SEP  = labelStyle.minSep;
           const isMobile = (DEV!=='desktop');
-          const MAX_SPRITES = Math.min(list.length, Math.min(isMobile ? 100 : 160, totalPos));
+          const MAX_SPRITES = Math.min(list.length, Math.min(isMobile ? 80 : 140, totalPos));
           const STEP = Math.max(1, Math.floor(totalPos / MAX_SPRITES));
+
           function tooCloseXYZ(x,y,z){
             for (const s of sprites){
               const dx = x - s.position.x;
@@ -205,13 +221,20 @@
             }
             return false;
           }
+
+          // Rejilla de ocupación en pantalla para evitar solapes visuales
+          const gridW = isMobile ? 18 : 22; // columnas
+          const gridH = isMobile ? 28 : 30; // filas
+          const occupied = new Set();
+          const keyOf = (nx,ny)=> nx+','+ny;
+
           for (let i=0; i<MAX_SPRITES; i++){
-            const text = list[i];
+            const text = list[i % list.length];
             const sp = makeTextSprite(text);
             const base = i * STEP;
             const jitterSpan = Math.max(2, STEP * 0.25);
             let placed = false;
-            for (let attempt=0; attempt<12 && !placed; attempt++){
+            for (let attempt=0; attempt<16 && !placed; attempt++){
               const jitter = Math.floor((Math.random() - 0.5) * jitterSpan);
               const idx = Math.min(totalPos - 1, Math.max(0, base + jitter));
               let x = posAttr.getX(idx);
@@ -219,36 +242,48 @@
               let z = posAttr.getZ(idx);
               const r2 = Math.hypot(x, z);
               if (r2 < INNER_GAP){
-                const newR = INNER_GAP + Math.random() * 8;
+                const newR = INNER_GAP + Math.random() * 10;
                 const scale = newR / (r2 || 1e-4);
                 x *= scale; z *= scale;
               }
-              x += (Math.random() - 0.5) * 3.0;
-              z += (Math.random() - 0.5) * 3.0;
+              x += (Math.random() - 0.5) * 3.2;
+              z += (Math.random() - 0.5) * 3.2;
+
+              // proyectar a NDC para reservar celda de pantalla
+              const v = new THREE.Vector3(x,y,z); v.project(camera);
+              if (v.z < -1 || v.z > 1) continue; // fuera de clip
+              const nx = Math.floor((v.x*0.5+0.5) * gridW);
+              const ny = Math.floor((-v.y*0.5+0.5) * gridH);
+              const k = keyOf(nx,ny);
+              if (occupied.has(k)) continue;
+
               if (!tooCloseXYZ(x,y,z)){
                 sp.position.set(x, y, z);
+                occupied.add(k);
                 placed = true;
               }
             }
+
             if (!placed){
+              // Empujar afuera como último recurso
               let x = posAttr.getX(base), y = posAttr.getY(base), z = posAttr.getZ(base);
-              const r2 = Math.hypot(x, z); const newR = Math.max(INNER_GAP+10, r2 + 10);
+              const r2 = Math.hypot(x, z); const newR = Math.max(INNER_GAP+14, r2 + 14);
               const scale = newR / (r2 || 1e-4);
               x *= scale; z *= scale; sp.position.set(x,y,z);
             }
+
             labelGroup.add(sp); sprites.push(sp);
           }
         }
 
         function shuffleArray(arr){ const a=[...arr]; for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
-        function randomizeNicknames(){
-          const extras = ["corazón","Mi peque","mi amor","mi vida","mi cielo","mi tesoro","mi niña","mi princesa","mi bella","mi preciosa"];
-          const labels = shuffleArray([...FEMALE_BIAS, ...extras, ...extras]);
-          populateNicknamesOnGalaxy(labels);
+        function randomizePhrases(){
+          const labels = shuffleArray([...LOVE_PHRASES, ...LOVE_PHRASES]); // duplicamos para densidad uniforme
+          populatePhrasesOnGalaxy(labels);
         }
-        randomizeNicknames();
+        randomizePhrases();
 
-        // === Controles táctiles / mouse (fallback: un dedo rota galaxia; dos dedos pinch-zoom + pan) ===
+        // === Controles: 1 dedo rota galaxia; 2 dedos pinch-zoom + pan; rueda = zoom ===
         let controls = { update(){} };
         (function createBasicControls(){
           const dom = renderer.domElement;
@@ -278,7 +313,7 @@
           dom.addEventListener('pointermove', e=>{
             state.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
 
-            // Un dedo: rotación de la galaxia
+            // 1 dedo: rotación de galaxia
             if (state.pointers.size===1 && state.dragging){
               const dx = e.clientX - state.lastX; const dy = e.clientY - state.lastY;
               state.lastX = e.clientX; state.lastY = e.clientY;
@@ -286,7 +321,7 @@
               galaxy.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, galaxy.rotation.x + dy * 0.003));
             }
 
-            // Dos dedos: pinch-zoom + pan
+            // 2 dedos: pinch + pan
             if (state.pointers.size===2){
               const pts = Array.from(state.pointers.values());
               const dx = pts[0].x - pts[1].x; const dy = pts[0].y - pts[1].y;
@@ -302,10 +337,6 @@
               }
               state.lastDist = dist; state.lastCentroid = centroid;
             }
-
-            // Actualiza NDC del mouse (para hover)
-            const rect = dom.getBoundingClientRect();
-            mouse.set(((e.clientX-rect.left)/rect.width)*2-1, -((e.clientY-rect.top)/rect.height)*2+1);
           }, { passive:true });
 
           dom.addEventListener('wheel', e=>{
@@ -314,9 +345,9 @@
           }, { passive:false });
         })();
 
-        // === Hover (raycaster) ===
+        // === Hover sutil (agranda) ===
         const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2(2,2); // fuera de pantalla inicialmente
+        const mouse = new THREE.Vector2(2,2); // fuera al inicio
         let hovered = null;
         function updateRaycast(){
           raycaster.setFromCamera(mouse, camera);
@@ -335,6 +366,10 @@
             hovered = null;
           }
         }
+        renderer.domElement.addEventListener('pointermove', e=>{
+          const rect = renderer.domElement.getBoundingClientRect();
+          mouse.set(((e.clientX-rect.left)/rect.width)*2-1, -((e.clientY-rect.top)/rect.height)*2+1);
+        }, { passive:true });
 
         // === Resize ===
         window.addEventListener('resize', ()=>{
@@ -343,7 +378,7 @@
           renderer.setSize(window.innerWidth, window.innerHeight);
           const newStyle = computeLabelStyle();
           if (newStyle.baseHeight !== labelStyle.baseHeight || newStyle.fontSize !== labelStyle.fontSize){
-            labelStyle = newStyle; randomizeNicknames();
+            labelStyle = newStyle; randomizePhrases();
           }
         });
 
@@ -352,7 +387,6 @@
         function animate(){
           const now = performance.now();
           const dt = (now - t0) / 1000; t0 = now;
-          controls.update && controls.update();
           galaxy.rotation.y += dt * 0.12;
           const wobble = 1 + Math.sin(now * 0.008) * 0.03;
           const camPos = camera.position;
@@ -370,51 +404,11 @@
         }
         animate();
 
-        // === Self-tests ===
-        function runSelfTests(){
-          const failures = [];
-          try { if (!THREE || !THREE.Scene) failures.push('THREE (módulo) no disponible'); } catch { failures.push('THREE exception'); }
-          if (!renderer) failures.push('renderer no creado');
-          if (!scene) failures.push('scene no creado');
-          if (!camera) failures.push('camera no creado');
-          if (!galaxyPoints || !galaxyPoints.geometry || !galaxyPoints.geometry.getAttribute('position')) failures.push('galaxyPoints inválido');
-          if (labelGroup.parent !== galaxy) failures.push('labelGroup fuera de galaxy');
-          if (Array.isArray(sprites) && sprites.length < 50) failures.push('pocas etiquetas (<50)');
-
-          // Verifica hueco central y separación mínima
-          if (Array.isArray(sprites) && sprites.length){
-            let minR = Infinity; let minD = Infinity;
-            for (let i=0;i<sprites.length;i++){
-              const p = sprites[i].position; const r2 = Math.hypot(p.x, p.z); if (r2 < minR) minR = r2;
-              for (let j=i+1;j<sprites.length && j<i+40;j++){
-                const q = sprites[j].position;
-                const dx = p.x - q.x, dz = p.z - q.z, dy = (p.y - q.y)*0.5;
-                const d = Math.sqrt(dx*dx + dz*dz + dy*dy); if (d < minD) minD = d;
-              }
-            }
-            if (minR < (labelStyle.innerGap-2)) failures.push('hueco central insuficiente (min r~' + minR.toFixed(1) + ')');
-            if (minD < (labelStyle.minSep-0.5)) failures.push('etiquetas demasiado juntas (min d~' + minD.toFixed(1) + ')');
-          }
-
-          // Test: rotación animada
-          setTimeout(()=>{
-            const a0 = galaxy.rotation.y;
-            setTimeout(()=>{ const a1 = galaxy.rotation.y; console.assert(a1 !== a0, 'La galaxia no está girando'); }, 160);
-          }, 0);
-
-          if (failures.length){
-            const note = document.createElement('div');
-            note.textContent = 'Error en inicialización: ' + failures.join(', ');
-            Object.assign(note.style, {
-              position:'fixed', left:'50%', top:'20px', transform:'translateX(-50%)',
-              background:'rgba(0,0,0,.6)', color:'#fff', padding:'10px 14px', borderRadius:'12px',
-              fontFamily:'system-ui, -apple-system, Segoe UI, Roboto, Arial', fontSize:'12px', zIndex:9999,
-              border:'1px solid rgba(255,255,255,.25)'
-            });
-            document.body.appendChild(note);
-          }
-        }
-        setTimeout(runSelfTests, 140);
+        // === Self-tests mínimos ===
+        setTimeout(()=>{
+          const a0 = galaxy.rotation.y;
+          setTimeout(()=>{ const a1 = galaxy.rotation.y; console.assert(a1 !== a0, 'La galaxia no está girando'); }, 160);
+        }, 0);
 
       } catch (err) {
         const note = document.createElement('pre');

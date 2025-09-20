@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Galaxia del Amor</title>
+  <meta name="description" content="Una galaxia 3D interactiva llena de apodos cariñosos. Arrastra para rotar y haz zoom." />
+  <style>
+    :root{
+      --bg1:#0a0318; /* noche profunda */
+      --bg2:#1a0b2e; /* violeta oscuro */
+      --white:#ffffff;
+    }
+
+    html, body { height: 100%; }
+    body{
+      margin:0; overflow:hidden; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+      color: var(--white);
+      background: radial-gradient(1200px 800px at 70% 20%, #2a174a 0%, transparent 40%),
+                  radial-gradient(1000px 700px at 20% 80%, #1e0f36 0%, transparent 45%),
+                  radial-gradient(100% 120% at 50% 50%, var(--bg2), var(--bg1));
+      background-attachment: fixed;
+    }
+
+    /* Lienzo a pantalla completa */
+    #scene { position: fixed; inset: 0; }
+  </style>
+</head>
+<body>
+  <div id="scene" aria-label="Galaxia 3D con apodos cariñosos"></div>
+
+  <!-- Three.js (sin módulos para que funcione al abrir el archivo local) -->
+  <script src="https://unpkg.com/three@0.152.2/build/three.min.js" defer></script>
+  <script src="https://unpkg.com/three@0.152.2/examples/js/controls/OrbitControls.js" defer></script>
+
+  <script>
+  (function(){
+    'use strict';
+
+    function ready(fn){ if (document.readyState !== 'loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
+    ready(()=>{
+      try {
+        // ====== Variables de módulo ======
+        const container = document.getElementById('scene');
+        if (!window.THREE) throw new Error('THREE no cargó');
+
+        const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        container.appendChild(renderer.domElement);
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+        camera.position.set(0, 18, 84);
+        camera.lookAt(0,0,0);
+
+        // Grupo raíz de la galaxia
+        const galaxy = new THREE.Group();
+        scene.add(galaxy);
+
+        // Luces
+        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+        const dir = new THREE.DirectionalLight(0xffffff, 0.7); dir.position.set(60, 100, 40); scene.add(dir);
+
+        // ====== Estrellas de fondo ======
+        (function createStarfield(){
+          const COUNT = 1500;
+          const geo = new THREE.BufferGeometry();
+          const pos = new Float32Array(COUNT * 3);
+          for (let i=0;i<COUNT;i++){
+            const r = THREE.MathUtils.randFloat(180, 480);
+            const phi = Math.random() * Math.PI * 2;
+            const costheta = THREE.MathUtils.randFloat(-1, 1);
+            const theta = Math.acos(costheta);
+            pos[i*3+0] = r * Math.sin(theta) * Math.cos(phi);
+            pos[i*3+1] = r * Math.sin(theta) * Math.sin(phi);
+            pos[i*3+2] = r * Math.cos(theta);
+          }
+          geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+          const mat = new THREE.PointsMaterial({ color: 0xffffff, size: 1.2, sizeAttenuation: true, transparent: true, opacity: 0.8 });
+          galaxy.add(new THREE.Points(geo, mat));
+        })();
+
+        // ====== Galaxia de partículas (espiral) ======
+        function createGalaxy(opts={}){
+          const p = Object.assign({
+            count: 12000, radius: 60, branches: 5, spin: 1.4,
+            randomness: 0.7, randomnessPower: 2.6,
+            insideColor: new THREE.Color('#ff2d95'),
+            outsideColor: new THREE.Color('#7c4dff'), size: 0.9,
+          }, opts);
+
+          const geo = new THREE.BufferGeometry();
+          const pos = new Float32Array(p.count * 3);
+          const col = new Float32Array(p.count * 3);
+
+          for (let i=0;i<p.count;i++){
+            const r = Math.pow(Math.random(), 0.8) * p.radius; // sesgo hacia afuera
+            const branch = i % p.branches;
+            const branchAngle = (branch / p.branches) * Math.PI * 2;
+            const spinAngle = r * p.spin;
+            const randomX = Math.pow(Math.random(), p.randomnessPower) * (Math.random()<0.5?1:-1) * p.randomness * r;
+            const randomY = Math.pow(Math.random(), p.randomnessPower) * (Math.random()<0.5?1:-1) * p.randomness * 0.4 * r;
+            const randomZ = Math.pow(Math.random(), p.randomnessPower) * (Math.random()<0.5?1:-1) * p.randomness * r;
+            const x = Math.cos(branchAngle + spinAngle) * r + randomX;
+            const y = randomY * 0.3;
+            const z = Math.sin(branchAngle + spinAngle) * r + randomZ;
+            pos[i*3+0]=x; pos[i*3+1]=y; pos[i*3+2]=z;
+            const c = p.insideColor.clone().lerp(p.outsideColor, r / p.radius);
+            col[i*3+0]=c.r; col[i*3+1]=c.g; col[i*3+2]=c.b;
+          }
+          geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+          geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+          const mat = new THREE.PointsMaterial({ size: p.size, sizeAttenuation:true, depthWrite:false, blending: THREE.AdditiveBlending, vertexColors:true, transparent:true });
+          const points = new THREE.Points(geo, mat);
+          galaxy.add(points);
+          return { geometry: geo, points };
+        }
+
+        const galaxyPoints = createGalaxy();
+
+        // ====== Apodos y sprites ======
+        const NICKNAMES = [
+          "Amor","Mi vida","Mi cielo","Mi corazón","Reina","Rey","Bebé","Cariño","Princesa","Príncipe",
+          "Luz de mis ojos","Chiquita","Chiquito","Mi sol","Estrellita","Osito","Osita","Mi tesoro","Mi mitad","Mi todo",
+          "Bombón","Dulzura","Preciosa","Precioso","Hermosa","Hermoso","Linda","Lindo","Chaparra","Chaparro",
+          "Cosita","Cosito","Chiquitita","Chiquitito","Peque","Pequeño","Muñeca","Muñeco","Nena","Nene",
+          "Cielo","Bella","Bello","Guapa","Guapo","Amorcito","Corazoncito","Querida","Querido","Cuchi",
+          "Churri","Churro","Güerita","Güerito","Morenita","Morenito","Flaca","Flaco","Gatita","Gatito",
+          "Conejita","Conejito","Lobita","Lobito","Mi ángel","Angelito","Sirena","Sireno","Estrella polar",
+          "Solcito","Lunita","Cometa","Neblina","Brillito","Miel","Cupcake","Candy","Dulce","Caramelo",
+          "Ternura","Risitas","Ojitos","Sonrisita","Tigre","Tigresa","Panda","Koala","Pingüi","Zorrita",
+          "Traviesa","Travieso","Mi paz","Mi abrigo","Mi hogar","Mi calma","Mi suerte","Mi aventura","Mi rayo",
+          "Destello","Melodía","Latido","Suspiro","Aurora","Brisa","Refugio","Chispa","Nube","Rayito",
+          "Carmelita","Canelita","Bomboncito","Tesoro mío"
+        ];
+
+        const FEMALE_BIAS = [
+          "Amor","Mi amor","Mi vida","Mi cielo","Mi corazón","Reina","Princesa","Reinita",
+          "Bebé","Cariño","Luz de mis ojos","Chiquita","Mi sol","Estrellita","Osita","Mi tesoro","Mi mitad","Mi todo",
+          "Bombón","Dulzura","Preciosa","Hermosa","Bonita","Linda","Chaparra","Cosita","Chiquitita","Peque",
+          "Muñeca","Nena","Cielo","Bella","Guapa","Amorcito","Corazoncito","Querida","Cuchi","Churri",
+          "Güerita","Morenita","Flaca","Gatita","Conejita","Lobita","Mi ángel","Sirena","Estrella polar",
+          "Solcito","Lunita","Cometa","Neblina","Brillito","Miel","Dulce","Caramelo","Ternura","Risitas",
+          "Ojitos","Sonrisita","Zorrita","Traviesa","Mi paz","Mi abrigo","Mi hogar","Mi calma","Mi suerte",
+          "Mi aventura","Mi rayo","Destello","Melodía","Latido","Suspiro","Aurora","Brisa","Refugio","Chispa",
+          "Nube","Rayito","Carmelita","Canelita","Bomboncito","Tesoro mío","Mi niña","Mi peque","Mi princesa",
+          "Mi bella","Mi preciosa","Mi niña bonita"
+        ];
+
+        const labelGroup = new THREE.Group();
+        galaxy.add(labelGroup);
+        const sprites = [];
+
+        // ====== Estilos de etiqueta (responsive) ======
+        const BREAKPOINT = 430; // ~iPhone 11 ancho en CSS px
+        function computeLabelStyle(){
+          const small = Math.min(window.innerWidth, window.innerHeight) <= BREAKPOINT;
+          if (small){
+            return { fontSize: 40, padding: 14, baseHeight: 2.5, hoverScale: 1.12, minSep: 6 };
+          }
+          return { fontSize: 52, padding: 18, baseHeight: 3.0, hoverScale: 1.15, minSep: 7 };
+        }
+        let labelStyle = computeLabelStyle();
+
+        function makeTextSprite(text, options={}){
+          const { fontSize, padding } = labelStyle;
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          ctx.font = `700 ${fontSize}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+          const metrics = ctx.measureText(text);
+          const w = Math.ceil(metrics.width + padding * 2);
+          const h = Math.ceil(fontSize + padding * 2);
+          const dpr = Math.min(window.devicePixelRatio || 1, 2);
+          canvas.width = w * dpr; canvas.height = h * dpr;
+          ctx.scale(dpr, dpr);
+
+          // Pastilla
+          const r = 14;
+          ctx.fillStyle = 'rgba(255,255,255,0.08)';
+          roundedRect(ctx, 0, 0, w, h, r); ctx.fill();
+          ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1; roundedRect(ctx, 0.5, 0.5, w-1, h-1, r); ctx.stroke();
+
+          // Texto alto contraste
+          ctx.fillStyle = '#ffffff';
+          ctx.strokeStyle = 'rgba(12,6,30,0.85)';
+          ctx.lineWidth = Math.max(2, Math.floor(fontSize * 0.06));
+          ctx.shadowColor = 'rgba(160,240,255,0.55)';
+          ctx.shadowBlur = 14; ctx.shadowOffsetY = 1;
+          ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+          ctx.font = `900 ${fontSize}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+          ctx.fillText(text, padding, h/2 + 2);
+          ctx.strokeText(text, padding, h/2 + 2);
+
+          const texture = new THREE.CanvasTexture(canvas);
+          texture.minFilter = THREE.LinearFilter;
+          texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
+          const material = new THREE.SpriteMaterial({ map: texture, transparent:true, depthWrite:false, depthTest:false });
+          const sprite = new THREE.Sprite(material);
+          const baseHeight = labelStyle.baseHeight;
+          const aspect = canvas.width / canvas.height;
+          sprite.scale.set(baseHeight * aspect, baseHeight, 1);
+          sprite.userData = { baseHeight, text };
+          return sprite;
+        }
+
+        function roundedRect(ctx, x, y, w, h, r){
+          ctx.beginPath();
+          ctx.moveTo(x+r, y);
+          ctx.lineTo(x+w-r, y);
+          ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+          ctx.lineTo(x+w, y+h-r);
+          ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+          ctx.lineTo(x+r, y+h);
+          ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+          ctx.lineTo(x, y+r);
+          ctx.quadraticCurveTo(x, y, x+r, y);
+          ctx.closePath();
+        }
+
+        function populateNicknamesOnGalaxy(list){
+          // limpiar
+          for (const s of sprites){ labelGroup.remove(s); s.material.map.dispose(); s.material.dispose(); }
+          sprites.length = 0;
+
+          const posAttr = galaxyPoints.geometry.getAttribute('position');
+          const totalPos = posAttr.count;
+          // separación
+          const INNER_GAP = 22;   // radio mínimo en XZ (ligeramente mayor para móviles)
+          const MIN_SEP  = labelStyle.minSep;     // separación mínima dependiente del tamaño
+          const isSmallScreen = Math.min(window.innerWidth, window.innerHeight) <= BREAKPOINT;
+          const MAX_SPRITES = Math.min(list.length, Math.min(isSmallScreen ? 140 : 160, totalPos));
+          const STEP = Math.max(1, Math.floor(totalPos / MAX_SPRITES));
+
+          function tooCloseXYZ(x,y,z){
+            for (const s of sprites){
+              const dx = x - s.position.x;
+              const dz = z - s.position.z;
+              const dy = (y - s.position.y) * 0.5;
+              if (dx*dx + dz*dz + dy*dy < MIN_SEP*MIN_SEP) return true;
+            }
+            return false;
+          }
+
+          for (let i=0; i<MAX_SPRITES; i++){
+            const text = list[i];
+            const sp = makeTextSprite(text);
+            const base = i * STEP;
+            const jitterSpan = Math.max(2, STEP * 0.25);
+            let placed = false;
+
+            for (let attempt=0; attempt<12 && !placed; attempt++){
+              const jitter = Math.floor((Math.random() - 0.5) * jitterSpan);
+              const idx = Math.min(totalPos - 1, Math.max(0, base + jitter));
+              let x = posAttr.getX(idx);
+              let y = posAttr.getY(idx);
+              let z = posAttr.getZ(idx);
+
+              const r2 = Math.hypot(x, z);
+              if (r2 < INNER_GAP){
+                const newR = INNER_GAP + Math.random() * 8;
+                const scale = newR / (r2 || 1e-4);
+                x *= scale; z *= scale;
+              }
+              x += (Math.random() - 0.5) * 4;
+              z += (Math.random() - 0.5) * 4;
+
+              if (!tooCloseXYZ(x,y,z)){
+                sp.position.set(x, y, z);
+                placed = true;
+              }
+            }
+
+            if (!placed){
+              let x = posAttr.getX(base), y = posAttr.getY(base), z = posAttr.getZ(base);
+              const r2 = Math.hypot(x, z); const newR = Math.max(INNER_GAP+10, r2 + 10);
+              const scale = newR / (r2 || 1e-4);
+              x *= scale; z *= scale; sp.position.set(x,y,z);
+            }
+
+            labelGroup.add(sp); sprites.push(sp);
+          }
+        }
+
+        function shuffleArray(arr){ const a=[...arr]; for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+        function randomizeNicknames(){
+          const EXTRAS = ["corazón","Mi peque","mi amor","mi vida","mi cielo","mi tesoro","mi niña","mi princesa","mi bella","mi preciosa"];
+          const labels = shuffleArray([...FEMALE_BIAS, ...EXTRAS, ...EXTRAS]);
+          populateNicknamesOnGalaxy(labels);
+        }
+
+        // Inicializar etiquetas
+        randomizeNicknames();
+
+        // ====== Controles ======
+        let controls;
+        if (typeof THREE.OrbitControls === 'function'){
+          controls = new THREE.OrbitControls(camera, renderer.domElement);
+          controls.enableDamping = true; controls.dampingFactor = 0.06;
+          controls.minDistance = 20; controls.maxDistance = 220;
+          controls.zoomSpeed = 0.8; controls.rotateSpeed = 0.6;
+        } else {
+          controls = { update(){} };
+          let dragging=false, lx=0, ly=0; const dom = renderer.domElement;
+          dom.addEventListener('pointerdown', e=>{ dragging=true; lx=e.clientX; ly=e.clientY; });
+          window.addEventListener('pointerup', ()=> dragging=false);
+          window.addEventListener('pointermove', e=>{
+            if (!dragging) return; const dx=e.clientX-lx, dy=e.clientY-ly; lx=e.clientX; ly=e.clientY;
+            galaxy.rotation.y += dx * 0.005; galaxy.rotation.x += dy * 0.003;
+          });
+          dom.addEventListener('wheel', e=>{ e.preventDefault(); camera.position.z = THREE.MathUtils.clamp(camera.position.z + e.deltaY * 0.02, 20, 220); }, { passive:false });
+          console.warn('OrbitControls no disponible; usando controles básicos.');
+        }
+
+        // ====== Hover (raycaster) ======
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        let hovered = null;
+        window.addEventListener('pointermove', ev=>{
+          const rect = renderer.domElement.getBoundingClientRect();
+          mouse.set(((ev.clientX-rect.left)/rect.width)*2-1, -((ev.clientY-rect.top)/rect.height)*2+1);
+        }, { passive:true });
+
+        function updateRaycast(){
+          raycaster.setFromCamera(mouse, camera);
+          const hit = raycaster.intersectObjects(sprites, false);
+          if (hit.length){
+            const obj = hit[0].object;
+            if (hovered !== obj){
+              if (hovered){ hovered.scale.set(hovered.userData.baseScaleX, hovered.userData.baseScaleY, 1); }
+              hovered = obj;
+              hovered.userData.baseScaleX = hovered.scale.x;
+              hovered.userData.baseScaleY = hovered.scale.y;
+              hovered.scale.set(hovered.scale.x * labelStyle.hoverScale, hovered.scale.y * labelStyle.hoverScale, 1);
+            }
+          } else {
+            if (hovered){ hovered.scale.set(hovered.userData.baseScaleX, hovered.userData.baseScaleY, 1); }
+            hovered = null;
+          }
+        }
+
+        // ====== Resize ======
+        window.addEventListener('resize', ()=>{
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(window.innerWidth, window.innerHeight);
+          // Recalcular estilos si cruzamos el breakpoint y regenerar etiquetas
+          const newStyle = computeLabelStyle();
+          if (newStyle.baseHeight !== labelStyle.baseHeight || newStyle.fontSize !== labelStyle.fontSize){
+            labelStyle = newStyle;
+            randomizeNicknames();
+          }
+        });
+
+        // ====== Animación ======
+        let t0 = performance.now();
+        function animate(){
+          const now = performance.now();
+          const dt = (now - t0) / 1000; t0 = now;
+          controls.update();
+          galaxy.rotation.y += dt * 0.12; // velocidad visible de giro
+          const wobble = 1 + Math.sin(now * 0.008) * 0.03;
+          const camPos = camera.position;
+          for (const s of sprites){
+            const dist = s.position.distanceTo(camPos);
+            const k = THREE.MathUtils.clamp(THREE.MathUtils.mapLinear(dist, 10, 180, 1.4, 4.2), 1.2, 4.6);
+            const h = s.userData.baseHeight * k * wobble;
+            const aspect = s.scale.x / s.scale.y;
+            s.scale.set(h * aspect, h, 1);
+            s.position.y += Math.sin(now * 0.001 + s.position.x * 0.02 + s.position.z * 0.02) * 0.004;
+          }
+          updateRaycast();
+          renderer.render(scene, camera);
+          requestAnimationFrame(animate);
+        }
+        animate();
+
+        // Accesibilidad teclado
+        window.addEventListener('keydown', e=>{
+          if (e.key === 'ArrowLeft') galaxy.rotation.y -= 0.08;
+          if (e.key === 'ArrowRight') galaxy.rotation.y += 0.08;
+          if (e.key === 'ArrowUp') camera.position.z -= 2;
+          if (e.key === 'ArrowDown') camera.position.z += 2;
+        });
+
+        // ====== Self-tests ======
+        function runSelfTests(){
+          const failures = [];
+          if (!renderer) failures.push('renderer no creado');
+          if (!scene) failures.push('scene no creado');
+          if (!camera) failures.push('camera no creado');
+          if (!galaxyPoints || !galaxyPoints.geometry || !galaxyPoints.geometry.getAttribute('position')) failures.push('galaxyPoints inválido');
+          if (!Array.isArray(sprites)) failures.push('sprites no es arreglo');
+          if (Array.isArray(sprites) && sprites.length < 50) failures.push('muy pocos sprites (<50)');
+          if (labelGroup.parent !== galaxy) failures.push('labelGroup no está dentro de galaxy (no girará)');
+          const posAttr = galaxyPoints && galaxyPoints.geometry && galaxyPoints.geometry.getAttribute('position');
+          if (posAttr){ const x0 = posAttr.getX(0); if (Number.isNaN(x0)) failures.push('posiciones NaN'); }
+          if (!controls) failures.push('controles no inicializados');
+
+          // Verifica hueco central y separación mínima
+          if (Array.isArray(sprites) && sprites.length){
+            let minR = Infinity; let minD = Infinity;
+            for (let i=0;i<sprites.length;i++){
+              const p = sprites[i].position; const r2 = Math.hypot(p.x, p.z); if (r2 < minR) minR = r2;
+              for (let j=i+1;j<sprites.length && j<i+40;j++){
+                const q = sprites[j].position;
+                const dx = p.x - q.x, dz = p.z - q.z, dy = (p.y - q.y)*0.5;
+                const d = Math.sqrt(dx*dx + dz*dz + dy*dy); if (d < minD) minD = d;
+              }
+            }
+            if (minR < 18) failures.push('hueco central insuficiente (min r~' + minR.toFixed(1) + ')');
+            if (minD < 6) failures.push('etiquetas demasiado juntas (min d~' + minD.toFixed(1) + ')');
+          }
+          // Tests responsivos iPhone 11
+          const small = Math.min(window.innerWidth, window.innerHeight) <= BREAKPOINT;
+          if (sprites.length){
+            if (small && sprites[0].userData.baseHeight > 2.6) failures.push('fuente demasiado grande en móvil');
+            if (!small && sprites[0].userData.baseHeight < 2.8) failures.push('fuente demasiado pequeña en desktop');
+          }
+
+          console.assert(failures.length === 0, 'Self-tests fallidos:', failures);
+          if (failures.length){
+            const note = document.createElement('div');
+            note.textContent = 'Error en inicialización: ' + failures.join(', ');
+            Object.assign(note.style, {
+              position:'fixed', left:'50%', top:'20px', transform:'translateX(-50%)',
+              background:'rgba(0,0,0,.6)', color:'#fff', padding:'10px 14px', borderRadius:'12px',
+              fontFamily:'system-ui, -apple-system, Segoe UI, Roboto, Arial', fontSize:'12px', zIndex:9999,
+              border:'1px solid rgba(255,255,255,.25)'
+            });
+            document.body.appendChild(note);
+          }
+        }
+        setTimeout(runSelfTests, 80);
+
+        // Test de rotación: comprueba que cambie el ángulo tras ~120 ms
+        setTimeout(()=>{
+          const angle0 = galaxy.rotation.y;
+          setTimeout(()=>{
+            const angle1 = galaxy.rotation.y;
+            console.assert(angle1 !== angle0, 'La galaxia no está girando');
+          }, 120);
+        }, 0);
+
+      } catch (err) {
+        const note = document.createElement('pre');
+        note.textContent = 'Fallo de arranque: ' + (err && err.message ? err.message : err);
+        Object.assign(note.style, {
+          position:'fixed', left:'50%', top:'20px', transform:'translateX(-50%)',
+          background:'rgba(0,0,0,.75)', color:'#fff', padding:'12px 16px', borderRadius:'12px',
+          fontFamily:'monospace', fontSize:'12px', zIndex:9999,
+          border:'1px solid rgba(255,255,255,.25)', maxWidth:'90vw', whiteSpace:'pre-wrap'
+        });
+        document.body.appendChild(note);
+        console.error(err);
+      }
+    });
+  })();
+  </script>
+</body>
+</html>
